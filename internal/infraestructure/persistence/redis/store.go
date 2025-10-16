@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	link "github.com/javito2003/shortener_url/internal/domain"
 	"github.com/redis/go-redis/v9"
@@ -20,19 +21,8 @@ func NewStore(client *redis.Client) *Store {
 func (s *Store) Save(ctx context.Context, link *link.Link) error {
 	pipe := s.client.Pipeline()
 
-	// Save by short code (key: shortCode, fields: url, shortCode)
-	pipe.HSet(ctx, "short:"+link.ShortCode, map[string]interface{}{
-		"url":       link.URL,
-		"shortCode": link.ShortCode,
-		"id":        link.ID,
-	})
-
-	// Save by URL for reverse lookup (key: url hash, fields: url, shortCode)
-	pipe.HSet(ctx, "url:"+link.URL, map[string]interface{}{
-		"url":       link.URL,
-		"shortCode": link.ShortCode,
-		"id":        link.ID,
-	})
+	pipe.HSet(ctx, "short:"+link.ShortCode, link)
+	pipe.HSet(ctx, "url:"+link.URL, link)
 
 	_, err := pipe.Exec(ctx)
 
@@ -40,21 +30,20 @@ func (s *Store) Save(ctx context.Context, link *link.Link) error {
 }
 
 func (s *Store) GetByUrl(ctx context.Context, url string) (*link.Link, error) {
-	result := s.client.HGetAll(ctx, "url:"+url)
-	if result.Err() != nil {
-		return nil, result.Err()
+	var existentLink link.Link
+
+	err := s.client.HGetAll(ctx, "url:"+url).Scan(&existentLink)
+	if err != nil {
+		return nil, err
 	}
 
-	data := result.Val()
-	if len(data) == 0 {
+	fmt.Println(existentLink.ShortCode)
+
+	if existentLink.URL == "" {
 		return nil, nil
 	}
 
-	return &link.Link{
-		ID:        data["id"],
-		URL:       data["url"],
-		ShortCode: data["shortCode"],
-	}, nil
+	return &existentLink, nil
 }
 
 func (s *Store) FindByShortCode(ctx context.Context, shortCode string) (*link.Link, error) {

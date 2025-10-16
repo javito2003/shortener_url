@@ -68,9 +68,10 @@ func (s *Service) Shorten(ctx context.Context, url string) (string, error) {
 	}
 
 	err = s.store.Save(ctx, &link.Link{
-		ID:        genID(),
-		URL:       url,
-		ShortCode: shortCode,
+		ID:         genID(),
+		URL:        url,
+		ShortCode:  shortCode,
+		ClickCount: 0,
 	})
 
 	if err != nil {
