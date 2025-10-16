@@ -11,5 +11,6 @@ func NewRouter(router *gin.Engine, shortener shortener.Shortener) {
 	{
 		shortenGroup := router.Group("/shorten")
 		shortenGroup.POST("", handler.createShortener())
+		shortenGroup.GET("/:shortCode", handler.resolveShortener())
 	}
 }

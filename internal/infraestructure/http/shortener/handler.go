@@ -1,6 +1,8 @@
 package shortener
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/javito2003/shortener_url/internal/app/shortener"
 )
@@ -28,5 +30,23 @@ func (h *Handler) createShortener() gin.HandlerFunc {
 		}
 
 		c.JSON(200, gin.H{"message": "createShortener", "data": link})
+	}
+}
+
+func (h *Handler) resolveShortener() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		shortCode := c.Param("shortCode")
+		if shortCode == "" {
+			c.JSON(400, gin.H{"error": "Short code is required"})
+			return
+		}
+
+		url, err := h.shortenerService.Resolve(c.Request.Context(), shortCode)
+		if err != nil {
+			c.JSON(404, gin.H{"error": "Short code not found"})
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, url)
 	}
 }

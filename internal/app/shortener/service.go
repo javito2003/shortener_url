@@ -81,5 +81,14 @@ func (s *Service) Shorten(ctx context.Context, url string) (string, error) {
 }
 
 func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error) {
-	return "", nil
+	linkFound, err := s.store.FindByShortCode(ctx, shortCode)
+	if err != nil {
+		return "", err
+	}
+
+	if linkFound == nil {
+		return "", fmt.Errorf("short code not found")
+	}
+
+	return linkFound.URL, nil
 }
