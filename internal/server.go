@@ -3,8 +3,8 @@ package internal
 import (
 	"github.com/gin-gonic/gin"
 	appShortener "github.com/javito2003/shortener_url/internal/app/shortener"
-	"github.com/javito2003/shortener_url/internal/infraestructure/http/shortener"
-	"github.com/javito2003/shortener_url/internal/infraestructure/persistence/redis"
+	"github.com/javito2003/shortener_url/internal/infrastructure/http/shortener"
+	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/redis"
 )
 
 type Server struct {

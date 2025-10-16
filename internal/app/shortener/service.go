@@ -43,24 +43,24 @@ func genID() string {
 }
 
 func (s *Service) Shorten(ctx context.Context, url string) (string, error) {
-	existingLink, err := s.store.GetByUrl(ctx, url)
+	existingLink, found, err := s.store.GetByUrl(ctx, url)
 	if err != nil {
 		return "", err
 	}
 
-	if existingLink != nil {
+	if found {
 		return s.baseUrl + existingLink.ShortCode, nil
 	}
 
 	shortCode := genShortCode()
 	for {
-		existingLink, err := s.store.FindByShortCode(ctx, shortCode)
+		_, found, err := s.store.FindByShortCode(ctx, shortCode)
 
 		if err != nil {
 			return "", err
 		}
 
-		if existingLink == nil {
+		if !found {
 			break
 		}
 
@@ -82,12 +82,12 @@ func (s *Service) Shorten(ctx context.Context, url string) (string, error) {
 }
 
 func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error) {
-	linkFound, err := s.store.FindByShortCode(ctx, shortCode)
+	linkFound, found, err := s.store.FindByShortCode(ctx, shortCode)
 	if err != nil {
 		return "", err
 	}
 
-	if linkFound == nil {
+	if !found {
 		return "", fmt.Errorf("short code not found")
 	}
 
