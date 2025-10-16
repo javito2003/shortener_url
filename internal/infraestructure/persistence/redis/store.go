@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 
 	link "github.com/javito2003/shortener_url/internal/domain"
 	"github.com/redis/go-redis/v9"
@@ -37,8 +36,6 @@ func (s *Store) GetByUrl(ctx context.Context, url string) (*link.Link, error) {
 		return nil, err
 	}
 
-	fmt.Println(existentLink.ShortCode)
-
 	if existentLink.URL == "" {
 		return nil, nil
 	}
@@ -47,19 +44,20 @@ func (s *Store) GetByUrl(ctx context.Context, url string) (*link.Link, error) {
 }
 
 func (s *Store) FindByShortCode(ctx context.Context, shortCode string) (*link.Link, error) {
-	result := s.client.HGetAll(ctx, "short:"+shortCode)
-	if result.Err() != nil {
-		return nil, result.Err()
+	var existentLink link.Link
+	err := s.client.HGetAll(ctx, "short:"+shortCode).Scan(&existentLink)
+	if err != nil {
+		return nil, err
 	}
 
-	data := result.Val()
-	if len(data) == 0 {
+	if existentLink.ShortCode == "" {
 		return nil, nil
 	}
 
-	return &link.Link{
-		ID:        data["id"],
-		URL:       data["url"],
-		ShortCode: data["shortCode"],
-	}, nil
+	return &existentLink, nil
+}
+
+func (s *Store) IncrementClickCount(ctx context.Context, shortCode string) error {
+	s.client.HIncrBy(ctx, "short:"+shortCode, "click_count", 1)
+	return nil
 }

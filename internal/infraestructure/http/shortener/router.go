@@ -7,10 +7,10 @@ import (
 
 func NewRouter(router *gin.Engine, shortener shortener.Shortener) {
 	handler := NewHandler(shortener)
+	router.GET("/:shortCode", handler.resolveShortener())
 
 	{
 		shortenGroup := router.Group("/shorten")
 		shortenGroup.POST("", handler.createShortener())
-		shortenGroup.GET("/:shortCode", handler.resolveShortener())
 	}
 }

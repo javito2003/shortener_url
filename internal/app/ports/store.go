@@ -10,4 +10,5 @@ type Store interface {
 	Save(ctx context.Context, link *link.Link) error
 	FindByShortCode(ctx context.Context, shortCode string) (*link.Link, error)
 	GetByUrl(ctx context.Context, url string) (*link.Link, error)
+	IncrementClickCount(ctx context.Context, shortCode string) error
 }

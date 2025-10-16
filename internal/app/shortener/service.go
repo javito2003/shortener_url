@@ -91,5 +91,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error)
 		return "", fmt.Errorf("short code not found")
 	}
 
+	s.store.IncrementClickCount(ctx, shortCode)
+
 	return linkFound.URL, nil
 }
