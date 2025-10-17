@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/javito2003/shortener_url/internal/app/clicks_worker"
 	appShortener "github.com/javito2003/shortener_url/internal/app/shortener"
+	"github.com/javito2003/shortener_url/internal/config"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http/shortener"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/redis"
@@ -19,8 +20,6 @@ type Server struct {
 
 func NewServer() *Server {
 	httpServer := gin.Default()
-
-	baseUrl := "http://localhost:8080"
 
 	client, err := redis.Connect()
 	if err != nil {
@@ -38,7 +37,7 @@ func NewServer() *Server {
 	clicksReader := redis.NewClicksReader(client)
 	bulkUpdater := mongo.NewLinkBulkUpdater(database)
 
-	shortenerService := appShortener.NewService(mongoRepo, redisCache, baseUrl)
+	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL)
 
 	workerService := clicks_worker.NewService(clicksReader, bulkUpdater)
 

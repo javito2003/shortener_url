@@ -16,8 +16,9 @@ type Redis struct {
 }
 
 type Config struct {
-	Mongo *Mongo
-	Redis *Redis
+	Mongo   *Mongo
+	Redis   *Redis
+	BaseURL string
 }
 
 var AppConfig *Config
@@ -40,5 +41,6 @@ func LoadConfig() {
 		Redis: &Redis{
 			Address: os.Getenv("REDIS_ADDRESS"),
 		},
+		BaseURL: os.Getenv("BASE_URL"),
 	}
 }
