@@ -35,6 +35,5 @@ jobs:
       
       - name: Push to DigitalOcean Container Registry
         run: |
-          doctl registry login
           docker tag shortener_url registry.digitalocean.com/javito/shortener_url:${{ env.ENV_NAME }}
           docker push registry.digitalocean.com/javito/shortener_url:${{ env.ENV_NAME }}
