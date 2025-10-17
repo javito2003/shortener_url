@@ -4,10 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log"
 	"math/big"
-	"time"
 
-	"github.com/javito2003/shortener_url/internal/app/ports"
 	link "github.com/javito2003/shortener_url/internal/domain"
 )
 
@@ -17,81 +16,76 @@ type Shortener interface {
 }
 
 type Service struct {
-	store   ports.Store
-	baseUrl string
+	baseURL string
+	repo    LinkRepository
+	cache   LinkCache
 }
 
-func NewService(store ports.Store, baseUrl string) *Service {
-	return &Service{store: store, baseUrl: baseUrl}
-}
-
-func genShortCode() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	const length = 6
-
-	result := make([]byte, length)
-	for i := range result {
-		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		result[i] = charset[num.Int64()]
+func NewService(repo LinkRepository, cache LinkCache, baseURL string) *Service {
+	return &Service{
+		repo:    repo,
+		cache:   cache,
+		baseURL: baseURL,
 	}
-
-	return string(result)
-}
-
-func genID() string {
-	return fmt.Sprintf("%d-%s", time.Now().UnixNano(), genShortCode())
 }
 
 func (s *Service) Shorten(ctx context.Context, url string) (string, error) {
-	existingLink, found, err := s.store.GetByUrl(ctx, url)
+	if existing, found, err := s.cache.GetByUrl(ctx, url); err != nil {
+		return "", err
+	} else if found {
+		return s.baseURL + "/" + existing.ShortCode, nil
+	}
+
+	shortCode, err := randomCode(7)
 	if err != nil {
 		return "", err
 	}
 
-	if found {
-		return s.baseUrl + existingLink.ShortCode, nil
-	}
+	l := &link.Link{URL: url, ShortCode: shortCode}
 
-	shortCode := genShortCode()
-	for {
-		_, found, err := s.store.FindByShortCode(ctx, shortCode)
-
-		if err != nil {
-			return "", err
-		}
-
-		if !found {
-			break
-		}
-
-		shortCode = genShortCode()
-	}
-
-	err = s.store.Save(ctx, &link.Link{
-		ID:         genID(),
-		URL:        url,
-		ShortCode:  shortCode,
-		ClickCount: 0,
-	})
-
+	savedLink, err := s.repo.Save(ctx, l)
 	if err != nil {
 		return "", err
 	}
 
-	return s.baseUrl + shortCode, nil
+	if err := s.cache.Save(ctx, savedLink); err != nil {
+		log.Printf("WARN: could not save link to cache: %v", err)
+	}
+
+	return s.baseURL + "/" + shortCode, nil
 }
 
 func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error) {
-	linkFound, found, err := s.store.FindByShortCode(ctx, shortCode)
+	l, found, err := s.cache.FindByShortCode(ctx, shortCode)
 	if err != nil {
 		return "", err
 	}
 
 	if !found {
-		return "", fmt.Errorf("short code not found")
+		l, found, err = s.repo.FindByShortCode(ctx, shortCode)
+		if err != nil {
+			return "", err
+		}
+
+		if !found {
+			return "", fmt.Errorf("short code not found")
+		}
 	}
 
-	s.store.IncrementClickCount(ctx, shortCode)
+	s.cache.IncrementClickCount(ctx, l.ShortCode)
 
-	return linkFound.URL, nil
+	return l.URL, nil
+}
+
+func randomCode(n int) (string, error) {
+	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var out []byte
+	for i := 0; i < n; i++ {
+		x, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
+		if err != nil {
+			return "", err
+		}
+		out = append(out, alphabet[x.Int64()])
+	}
+	return string(out), nil
 }

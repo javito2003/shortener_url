@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 
+	"github.com/javito2003/shortener_url/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -14,7 +15,7 @@ func Connect() (*redis.Client, error) {
 	}
 
 	client = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: config.AppConfig.Redis.Address,
 	})
 
 	_, err := client.Ping(context.Background()).Result()

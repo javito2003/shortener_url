@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"strconv"
 
 	link "github.com/javito2003/shortener_url/internal/domain"
 	"github.com/redis/go-redis/v9"
@@ -12,27 +11,11 @@ type Store struct {
 	client *redis.Client
 }
 
-func mapUrlSaved(link *link.Link) map[string]interface{} {
-	return map[string]interface{}{
-		"id":          link.ID,
-		"url":         link.URL,
-		"short_code":  link.ShortCode,
-		"click_count": link.ClickCount,
-	}
-}
-
-func mapToLink(data map[string]string) *link.Link {
-	var clickCount int64
-	if data["click_count"] != "" {
-		clickCount, _ = strconv.ParseInt(data["click_count"], 10, 64)
-	}
-
-	return &link.Link{
-		ID:         data["id"],
-		URL:        data["url"],
-		ShortCode:  data["shortCode"],
-		ClickCount: int(clickCount),
-	}
+type UrlSaved struct {
+	ID         string `redis:"id"`
+	URL        string `redis:"url"`
+	ShortCode  string `redis:"short_code"`
+	ClickCount int64  `redis:"click_count"`
 }
 
 func NewStore(client *redis.Client) *Store {
@@ -44,7 +27,12 @@ func NewStore(client *redis.Client) *Store {
 func (s *Store) Save(ctx context.Context, link *link.Link) error {
 	pipe := s.client.Pipeline()
 
-	pipe.HSet(ctx, "short:"+link.ShortCode, mapUrlSaved(link))
+	pipe.HSet(ctx, "short:"+link.ShortCode, UrlSaved{
+		ID:         link.ID,
+		URL:        link.URL,
+		ShortCode:  link.ShortCode,
+		ClickCount: int64(link.ClickCount),
+	})
 	pipe.Set(ctx, "url:"+link.URL, link.ShortCode, 0)
 
 	_, err := pipe.Exec(ctx)
@@ -66,19 +54,51 @@ func (s *Store) GetByUrl(ctx context.Context, url string) (existentLink *link.Li
 }
 
 func (s *Store) FindByShortCode(ctx context.Context, shortCode string) (existentLink *link.Link, found bool, err error) {
-	val, err := s.client.HGetAll(ctx, "short:"+shortCode).Result()
+	var linkData UrlSaved
+	err = s.client.HGetAll(ctx, "short:"+shortCode).Scan(&linkData)
 	if err != nil {
 		return nil, false, err
 	}
 
-	if len(val) == 0 {
+	if linkData == (UrlSaved{}) {
 		return nil, false, nil
 	}
-	linkData := mapToLink(val)
-	return linkData, true, nil
+
+	return &link.Link{
+		ID:         linkData.ID,
+		URL:        linkData.URL,
+		ShortCode:  linkData.ShortCode,
+		ClickCount: int(linkData.ClickCount),
+	}, true, nil
 }
 
 func (s *Store) IncrementClickCount(ctx context.Context, shortCode string) error {
-	s.client.HIncrBy(ctx, "short:"+shortCode, "click_count", 1)
-	return nil
+	err := s.client.HIncrBy(ctx, "clicks:short:"+shortCode, "click_count", 1).Err()
+	return err
 }
+
+// func (s *Store) IncrementHotness(ctx context.Context, shortCode string) error {
+// 	s.client.HIncrBy(ctx, "clicks:hot:"+shortCode, "hotness", 1)
+// 	return nil
+// }
+
+// func (s *Store) GetHotness(ctx context.Context, limit int64) ([]*ports.LinkData, error) {
+// 	var links []*ports.LinkData
+
+// 	var cursor uint64
+// 	for {
+// 		keys, nextCursor, err := s.client.Scan(ctx, cursor, "clicks:hot:*", 100).Result()
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		fmt.Println(keys)
+
+// 		cursor = nextCursor
+// 		if cursor == 0 {
+// 			break
+// 		}
+// 	}
+
+// 	return links, nil
+// }

@@ -47,6 +47,6 @@ func (h *Handler) resolveShortener() gin.HandlerFunc {
 			return
 		}
 
-		c.Redirect(http.StatusSeeOther, url)
+		c.Redirect(http.StatusTemporaryRedirect, url)
 	}
 }
