@@ -8,6 +8,7 @@ import (
 	"github.com/javito2003/shortener_url/internal/app/clicks_worker"
 	appShortener "github.com/javito2003/shortener_url/internal/app/shortener"
 	"github.com/javito2003/shortener_url/internal/config"
+	"github.com/javito2003/shortener_url/internal/infrastructure/http"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http/shortener"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/redis"
@@ -21,6 +22,7 @@ type Server struct {
 func NewServer() *Server {
 	httpServer := gin.Default()
 
+	// Clients
 	client, err := redis.Connect()
 	if err != nil {
 		panic(err)
@@ -30,15 +32,14 @@ func NewServer() *Server {
 		panic(err)
 	}
 
-	// Infrastructure layer initialization
+	// Repositories and Stores
 	mongoRepo := mongo.NewRepository(database)
 	redisCache := redis.NewStore(client)
-
 	clicksReader := redis.NewClicksReader(client)
 	bulkUpdater := mongo.NewLinkBulkUpdater(database)
 
+	// Service
 	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL)
-
 	workerService := clicks_worker.NewService(clicksReader, bulkUpdater)
 
 	server := &Server{
@@ -46,14 +47,17 @@ func NewServer() *Server {
 		ShortenerService: shortenerService,
 	}
 
-	shortener.NewRouter(httpServer, shortenerService)
-
+	// Worker initialization
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		workerService.Run(ctx, 10*time.Second)
 	}()
 
 	_ = cancel
+
+	// Router
+	httpServer.Use(http.ErrorHandler())
+	shortener.NewRouter(httpServer, shortenerService)
 
 	return server
 }

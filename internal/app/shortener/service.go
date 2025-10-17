@@ -3,7 +3,6 @@ package shortener
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
 	"log"
 	"math/big"
 
@@ -68,7 +67,7 @@ func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error)
 		}
 
 		if !found {
-			return "", fmt.Errorf("short code not found")
+			return "", ErrShortLinkNotFound
 		}
 
 		if err := s.cache.Save(ctx, l); err != nil {
