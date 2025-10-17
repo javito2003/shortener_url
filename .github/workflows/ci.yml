@@ -21,7 +21,7 @@ jobs:
         run: |
           if [[ "${{ env.BRANCH_NAME }}" == "development" ]]; then
             echo "ENV_NAME=dev" >> $GITHUB_ENV
-          elif [[ "${{ env.BRANCH_NAME }}" == "main" ]]; then
+          elif [[ "${{ env.BRANCH_NAME }}" == "master" ]]; then
             echo "ENV_NAME=prod" >> $GITHUB_ENV
           fi
 
