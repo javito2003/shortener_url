@@ -1,4 +1,4 @@
-package link
+package domain
 
 type Link struct {
 	ID         string `json:"id,omitempty"`

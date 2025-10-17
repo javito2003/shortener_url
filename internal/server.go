@@ -5,13 +5,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	appAuth "github.com/javito2003/shortener_url/internal/app/auth"
 	"github.com/javito2003/shortener_url/internal/app/clicks_worker"
 	appShortener "github.com/javito2003/shortener_url/internal/app/shortener"
 	"github.com/javito2003/shortener_url/internal/config"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http"
+	"github.com/javito2003/shortener_url/internal/infrastructure/http/auth"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http/shortener"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo"
+	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo/link"
+	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo/user"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/redis"
+	"github.com/javito2003/shortener_url/internal/infrastructure/security"
 )
 
 type Server struct {
@@ -33,14 +38,17 @@ func NewServer() *Server {
 	}
 
 	// Repositories and Stores
-	mongoRepo := mongo.NewRepository(database)
+	mongoRepo := link.NewRepository(database)
+	userRepo := user.NewRepository(database)
 	redisCache := redis.NewStore(client)
 	clicksReader := redis.NewClicksReader(client)
-	bulkUpdater := mongo.NewLinkBulkUpdater(database)
+	bulkUpdater := link.NewLinkBulkUpdater(database)
+	hasher := security.NewBcryptHasher()
 
 	// Service
 	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL)
 	workerService := clicks_worker.NewService(clicksReader, bulkUpdater)
+	authService := appAuth.NewService(userRepo, hasher)
 
 	server := &Server{
 		http:             httpServer,
@@ -58,6 +66,7 @@ func NewServer() *Server {
 	// Router
 	httpServer.Use(http.ErrorHandler())
 	shortener.NewRouter(httpServer, shortenerService)
+	auth.NewRouter(httpServer, authService)
 
 	return server
 }
