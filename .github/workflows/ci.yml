@@ -24,16 +24,15 @@ jobs:
           elif [[ "${{ env.BRANCH_NAME }}" == "master" ]]; then
             echo "ENV_NAME=prod" >> $GITHUB_ENV
           fi
-
-      - name: Build the Docker image
-        run: docker build -t shortener_url .
-
+          
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
       
-      - name: Push to DigitalOcean Container Registry
-        run: |
-          docker tag shortener_url registry.digitalocean.com/javito/shortener_url:${{ env.ENV_NAME }}
-          docker push registry.digitalocean.com/javito/shortener_url:${{ env.ENV_NAME }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: registry.digitalocean.com/shortener-url:${{ env.ENV_NAME }}
