@@ -5,4 +5,5 @@ type Link struct {
 	URL        string `json:"url,omitempty"`
 	ShortCode  string `json:"short_code,omitempty"`
 	ClickCount int    `json:"click_count,omitempty"`
+	UserID     string `json:"user_id,omitempty"`
 }

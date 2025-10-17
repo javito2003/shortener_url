@@ -69,7 +69,7 @@ func NewServer() *Server {
 
 	// Router
 	httpServer.Use(http.ErrorHandler())
-	shortener.NewRouter(httpServer, shortenerService)
+	shortener.NewRouter(httpServer, shortenerService, token)
 	auth.NewRouter(httpServer, authService)
 	httpUser.NewRouter(httpServer, userService, token)
 

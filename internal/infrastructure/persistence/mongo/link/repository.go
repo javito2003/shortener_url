@@ -7,6 +7,7 @@ import (
 	link "github.com/javito2003/shortener_url/internal/domain"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type repository struct {
@@ -18,6 +19,7 @@ type linkModel struct {
 	ShortCode  string        `bson:"short_code"`
 	Url        string        `bson:"url"`
 	ClickCount int           `bson:"click_count"`
+	UserID     bson.ObjectID `bson:"user_id"`
 }
 
 func NewRepository(db *mongo.Client) *repository {
@@ -25,10 +27,16 @@ func NewRepository(db *mongo.Client) *repository {
 }
 
 func (r *repository) Save(ctx context.Context, link *link.Link) (*link.Link, error) {
+	userId, err := bson.ObjectIDFromHex(link.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := r.collection.InsertOne(ctx, linkModel{
 		ShortCode:  link.ShortCode,
 		Url:        link.URL,
 		ClickCount: link.ClickCount,
+		UserID:     userId,
 	})
 
 	if err != nil {
@@ -77,30 +85,40 @@ func (r *repository) GetByUrl(ctx context.Context, url string) (*link.Link, bool
 	}, true, nil
 }
 
-// func (r *repository) IncrementBulk(ctx context.Context, links []*ports.LinkData) error {
-// 	models := make([]mongo.WriteModel, 0, len(links))
+func (r *repository) GetByUser(ctx context.Context, userID string, limit, skip int32) ([]*link.Link, error) {
+	userIdObjectID, err := bson.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, err
+	}
 
-// 	batch := 20
+	filter := map[string]interface{}{"user_id": userIdObjectID}
+	limitInt64 := int64(limit)
+	skipInt64 := int64(skip)
+	options := options.Find().SetLimit(limitInt64).SetSkip(skipInt64)
 
-// 	for i := 0; i < len(links); i += batch {
-// 		end := i + batch
-// 		if end > len(links) {
-// 			end = len(links)
-// 		}
+	cursor, err := r.collection.Find(ctx, filter, options)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
 
-// 		models = models[:0]
-// 		bulk := []mongo.WriteModel{}
-// 		for _, link := range links[i:end] {
-// 			bulk = append(bulk, mongo.NewUpdateOneModel().SetFilter(bson.M{"short_code": link.Id}).SetUpdate(bson.M{"$inc": bson.M{"click_count": link.Increment}}))
-// 		}
+	var links []*link.Link
+	for cursor.Next(ctx) {
+		var model linkModel
+		if err := cursor.Decode(&model); err != nil {
+			return nil, err
+		}
+		links = append(links, &link.Link{
+			ID:         model.ID.Hex(),
+			ShortCode:  model.ShortCode,
+			URL:        model.Url,
+			ClickCount: model.ClickCount,
+		})
+	}
 
-// 		models = append(models, bulk...)
-// 		_, err := r.collection.BulkWrite(ctx, models)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
 
-// 	_, err := r.collection.BulkWrite(ctx, models)
-// 	return err
-// }
+	return links, nil
+}

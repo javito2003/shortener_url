@@ -24,7 +24,9 @@ func (h *Handler) createShortener() gin.HandlerFunc {
 			return
 		}
 
-		link, err := h.shortenerService.Shorten(c.Request.Context(), req.URL)
+		userId := c.GetString("userID")
+
+		link, err := h.shortenerService.Shorten(c.Request.Context(), req.URL, userId)
 		if err != nil {
 			c.Error(err)
 			return
@@ -49,5 +51,26 @@ func (h *Handler) resolveShortener() gin.HandlerFunc {
 		}
 
 		c.Redirect(http.StatusTemporaryRedirect, url)
+	}
+}
+
+func (h *Handler) getByUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.GetString("userID")
+		limit := int32(10)
+		skip := int32(0)
+
+		links, err := h.shortenerService.GetByUser(c.Request.Context(), userID, limit, skip)
+		if err != nil {
+			c.Error(err)
+			return
+		}
+
+		var response []*linkResponse
+		for _, l := range links {
+			response = append(response, toLinkResponse(l))
+		}
+
+		c.JSON(200, gin.H{"message": "getByUser", "data": response})
 	}
 }
