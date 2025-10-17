@@ -31,7 +31,7 @@ jobs:
           token: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
     
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
-        run: doctl registry login --expiry-seconds 600
+        run: doctl registry login --access-token ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
