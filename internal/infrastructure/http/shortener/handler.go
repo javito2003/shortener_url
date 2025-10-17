@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/javito2003/shortener_url/internal/app/shortener"
+	httpServer "github.com/javito2003/shortener_url/internal/infrastructure/http"
 )
 
 type Handler struct {
@@ -56,21 +57,27 @@ func (h *Handler) resolveShortener() gin.HandlerFunc {
 
 func (h *Handler) getByUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID := c.GetString("userID")
-		limit := int32(10)
-		skip := int32(0)
+		var pagination httpServer.PaginationQuery
+		if err := c.ShouldBindQuery(&pagination); err != nil {
+			c.Error(err)
+			return
+		}
 
+		limit := pagination.Limit()
+		skip := pagination.Offset()
+
+		userID := c.GetString("userID")
 		links, err := h.shortenerService.GetByUser(c.Request.Context(), userID, limit, skip)
 		if err != nil {
 			c.Error(err)
 			return
 		}
 
-		var response []*linkResponse
+		response := make([]*linkResponse, 0, len(links))
 		for _, l := range links {
 			response = append(response, toLinkResponse(l))
 		}
 
-		c.JSON(200, gin.H{"message": "getByUser", "data": response})
+		c.JSON(200, gin.H{"message": "getByUser", "data": response, "page": pagination.ActualPage(), "page_size": pagination.Limit()})
 	}
 }
