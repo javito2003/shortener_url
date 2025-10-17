@@ -25,16 +25,16 @@ jobs:
             echo "ENV_NAME=prod" >> $GITHUB_ENV
           fi
 
-      - name: Login into Digital Ocean Container Registry
-        uses: docker/login-action@v2
+      - name: Build the Docker image
+        run: docker build -t shortener_url .
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
         with:
-          registry: registry.digitalocean.com
-          username: ${{ secrets.DIGITAL_OCEAN_USERNAME }}
-          password: ${{ secrets.DIGITAL_OCEAN_ACCESS_TOKEN }}
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: registry.digitalocean.com/shortener-url:${{ env.ENV_NAME }}
+      - name: Push to DigitalOcean Container Registry
+        run: |
+          doctl registry login
+          docker tag shortener_url registry.digitalocean.com/javito/shortener_url:${{ env.ENV_NAME }}
+          docker push registry.digitalocean.com/javito/shortener_url:${{ env.ENV_NAME }}
