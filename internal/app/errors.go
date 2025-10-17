@@ -6,6 +6,7 @@ const (
 	ErrNotFound ErrorType = iota
 	ErrConflict
 	ErrInternal
+	ErrUnauthorized
 )
 
 type AppError struct {
@@ -26,4 +27,12 @@ func NewAppError(t ErrorType, msg string) *AppError {
 
 func NewNotFoundError(msg string) *AppError {
 	return NewAppError(ErrNotFound, msg)
+}
+
+func NewUnauthorizedError(msg string) *AppError {
+	return NewAppError(ErrUnauthorized, msg)
+}
+
+func NewConflictError(msg string) *AppError {
+	return NewAppError(ErrConflict, msg)
 }

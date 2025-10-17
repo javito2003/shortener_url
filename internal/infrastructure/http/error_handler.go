@@ -24,14 +24,16 @@ func ErrorHandler() gin.HandlerFunc {
 		if errors.As(lastError, &appErr) {
 			switch appErr.Type {
 			case app.ErrNotFound:
-				c.JSON(http.StatusNotFound, gin.H{"error": appErr.Message})
+				c.JSON(http.StatusNotFound, gin.H{"message": appErr.Message})
+			case app.ErrUnauthorized:
+				c.JSON(http.StatusUnauthorized, gin.H{"message": appErr.Message})
 			case app.ErrConflict:
-				c.JSON(http.StatusConflict, gin.H{"error": appErr.Message})
+				c.JSON(http.StatusConflict, gin.H{"message": appErr.Message})
 			default:
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "an unexpected application error occurred"})
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "an unexpected application error occurred"})
 			}
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "an internal server error occurred"})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "an internal server error occurred"})
 		}
 	}
 }

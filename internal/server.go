@@ -44,11 +44,12 @@ func NewServer() *Server {
 	clicksReader := redis.NewClicksReader(client)
 	bulkUpdater := link.NewLinkBulkUpdater(database)
 	hasher := security.NewBcryptHasher()
+	token := security.NewJWTGenerator("secret")
 
 	// Service
 	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL)
 	workerService := clicks_worker.NewService(clicksReader, bulkUpdater)
-	authService := appAuth.NewService(userRepo, hasher)
+	authService := appAuth.NewService(userRepo, hasher, token)
 
 	server := &Server{
 		http:             httpServer,
