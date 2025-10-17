@@ -37,4 +37,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: registry.digitalocean.com/javito2003/shortener_url:${{ env.ENV_NAME }}
+          tags: registry.digitalocean.com/shortener-url:${{ env.ENV_NAME }}
