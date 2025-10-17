@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/javito2003/shortener_url/internal/app/user"
 	"github.com/javito2003/shortener_url/internal/config"
 	"github.com/javito2003/shortener_url/internal/domain"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -57,6 +58,31 @@ func (r *repository) FindByEmail(ctx context.Context, email string) (*domain.Use
 	}
 	if err != nil {
 		return nil, false, err
+	}
+
+	return &domain.User{
+		ID:        model.ID.Hex(),
+		FirstName: model.FirstName,
+		LastName:  model.LastName,
+		Email:     model.Email,
+		Password:  model.Password,
+		CreatedAt: model.CreatedAt,
+	}, true, nil
+}
+
+func (r *repository) GetById(ctx context.Context, id string) (*domain.User, bool, error) {
+	objectID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, false, user.ErrInvalidUserId
+	}
+
+	var model userModel
+	err = r.collection.FindOne(ctx, map[string]interface{}{"_id": objectID}).Decode(&model)
+	if err == mongo.ErrNoDocuments {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, user.ErrInvalidUserId
 	}
 
 	return &domain.User{

@@ -8,10 +8,12 @@ import (
 	appAuth "github.com/javito2003/shortener_url/internal/app/auth"
 	"github.com/javito2003/shortener_url/internal/app/clicks_worker"
 	appShortener "github.com/javito2003/shortener_url/internal/app/shortener"
+	appUser "github.com/javito2003/shortener_url/internal/app/user"
 	"github.com/javito2003/shortener_url/internal/config"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http/auth"
 	"github.com/javito2003/shortener_url/internal/infrastructure/http/shortener"
+	httpUser "github.com/javito2003/shortener_url/internal/infrastructure/http/user"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo/link"
 	"github.com/javito2003/shortener_url/internal/infrastructure/persistence/mongo/user"
@@ -50,6 +52,7 @@ func NewServer() *Server {
 	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL)
 	workerService := clicks_worker.NewService(clicksReader, bulkUpdater)
 	authService := appAuth.NewService(userRepo, hasher, token)
+	userService := appUser.NewUserService(userRepo)
 
 	server := &Server{
 		http:             httpServer,
@@ -68,6 +71,7 @@ func NewServer() *Server {
 	httpServer.Use(http.ErrorHandler())
 	shortener.NewRouter(httpServer, shortenerService)
 	auth.NewRouter(httpServer, authService)
+	httpUser.NewRouter(httpServer, userService, token)
 
 	return server
 }

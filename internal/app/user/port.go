@@ -9,6 +9,7 @@ import (
 type UserRepository interface {
 	Save(ctx context.Context, user *domain.User) (*domain.User, error)
 	FindByEmail(ctx context.Context, email string) (*domain.User, bool, error)
+	GetById(ctx context.Context, id string) (*domain.User, bool, error)
 }
 
 type PasswordHasher interface {

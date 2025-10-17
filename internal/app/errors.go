@@ -7,6 +7,7 @@ const (
 	ErrConflict
 	ErrInternal
 	ErrUnauthorized
+	ErrBadRequest
 )
 
 type AppError struct {
@@ -35,4 +36,8 @@ func NewUnauthorizedError(msg string) *AppError {
 
 func NewConflictError(msg string) *AppError {
 	return NewAppError(ErrConflict, msg)
+}
+
+func NewBadRequestError(msg string) *AppError {
+	return NewAppError(ErrBadRequest, msg)
 }
