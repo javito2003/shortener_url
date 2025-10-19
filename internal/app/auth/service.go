@@ -26,7 +26,7 @@ func (s *Service) CreateUser(ctx context.Context, firstName, lastName, email, pa
 	if _, found, err := s.repo.FindByEmail(ctx, email); err != nil {
 		return nil, err
 	} else if found {
-		return nil, ErrAlreadyLoggedIn
+		return nil, ErrAlreadyUserExists
 	}
 
 	hashedPassword, err := s.hasher.Hash(password)
@@ -46,6 +46,7 @@ func (s *Service) CreateUser(ctx context.Context, firstName, lastName, email, pa
 
 func (s *Service) Authenticate(ctx context.Context, email, password string) (string, error) {
 	user, found, err := s.repo.FindByEmail(ctx, email)
+
 	if err != nil {
 		return "", ErrInvalidCredentials
 	}
