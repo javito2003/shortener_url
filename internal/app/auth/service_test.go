@@ -7,6 +7,7 @@ import (
 
 	"github.com/javito2003/shortener_url/internal/app"
 	"github.com/javito2003/shortener_url/internal/app/auth"
+	"github.com/javito2003/shortener_url/internal/app/user/mocks"
 	"github.com/javito2003/shortener_url/internal/domain"
 	"github.com/javito2003/shortener_url/internal/infrastructure/security"
 	"github.com/stretchr/testify/assert"
@@ -17,33 +18,11 @@ type MockUserRepository struct {
 	mock.Mock
 }
 
-// Implementamos los métodos de la interfaz que el AuthService necesita
-func (m *MockUserRepository) Save(ctx context.Context, user *domain.User) (*domain.User, error) {
-	args := m.Called(ctx, user)
-	return args.Get(0).(*domain.User), args.Error(1)
-}
-
-func (m *MockUserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, bool, error) {
-	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, false, args.Error(1)
-	}
-	return args.Get(0).(*domain.User), true, args.Error(1)
-}
-
-func (m *MockUserRepository) GetById(ctx context.Context, id string) (*domain.User, bool, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, false, args.Error(1)
-	}
-	return args.Get(0).(*domain.User), true, args.Error(1)
-}
-
 // --- 2. Función de Setup (Ayudante) ---
 
 // setupService crea una instancia del servicio con dependencias reales (excepto el repo).
-func setupService() (*auth.Service, *MockUserRepository) {
-	mockUserRepo := new(MockUserRepository)
+func setupService() (*auth.Service, *mocks.UserRepository) {
+	mockUserRepo := new(mocks.UserRepository)
 
 	// Usamos las implementaciones REALES de cómputo para un test más confiable.
 	realHasher := security.NewBcryptHasher()
@@ -77,7 +56,7 @@ func TestAuthService_Login(t *testing.T) {
 		}
 
 		// Configuramos el mock: si se busca este email, se devuelve el mockUser
-		mockUserRepo.On("FindByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		mockUserRepo.On("FindByEmail", mock.Anything, "test@example.com").Return(mockUser, true, nil).Once()
 
 		// Act
 		token, err := authSvc.Authenticate(context.Background(), "test@example.com", password)
@@ -96,7 +75,7 @@ func TestAuthService_Login(t *testing.T) {
 
 		// Configuramos el mock: si se busca este email, se devuelve un error NotFound
 		mockUserRepo.On("FindByEmail", mock.Anything, "notfound@example.com").
-			Return(nil, app.NewNotFoundError("user")).Once()
+			Return(nil, false, app.NewNotFoundError("user")).Once()
 
 		// Act
 		token, err := authSvc.Authenticate(context.Background(), "notfound@example.com", "password123")
@@ -128,7 +107,7 @@ func TestAuthService_Login(t *testing.T) {
 			LastName:  "moreno",
 		}
 
-		mockUserRepo.On("FindByEmail", mock.Anything, "test@example.com").Return(mockUser, nil).Once()
+		mockUserRepo.On("FindByEmail", mock.Anything, "test@example.com").Return(mockUser, true, nil).Once()
 
 		// Act
 		token, err := authSvc.Authenticate(context.Background(), "test@example.com", "WRONG-password")
@@ -169,7 +148,7 @@ func TestAuthService_Register(t *testing.T) {
 		}
 
 		// Configuramos el mock: si se busca este email, se devuelve el mockUser
-		mockUserRepo.On("FindByEmail", mock.Anything, email).Return(nil, nil).Once()
+		mockUserRepo.On("FindByEmail", mock.Anything, email).Return(nil, false, nil).Once()
 		mockUserRepo.On("Save", mock.Anything, mock.MatchedBy(func(user *domain.User) bool {
 			return user.Email == email && user.FirstName == firstName && user.LastName == lastName && realHasher.Compare(user.Password, password)
 		})).Return(mockUser, nil).Once()
@@ -205,7 +184,7 @@ func TestAuthService_Register(t *testing.T) {
 		}
 
 		// Configuramos el mock: si se busca este email, se devuelve el mockUser
-		mockUserRepo.On("FindByEmail", mock.Anything, email).Return(mockUser, nil).Once()
+		mockUserRepo.On("FindByEmail", mock.Anything, email).Return(mockUser, true, nil).Once()
 		// Act
 		user, err := authSvc.CreateUser(context.Background(), firstName, lastName, email, password)
 

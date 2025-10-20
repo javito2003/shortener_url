@@ -52,7 +52,7 @@ func (s *Service) Shorten(ctx context.Context, url, user string) (string, error)
 		log.Printf("WARN: could not save link to cache: %v", err)
 	}
 
-	return s.baseURL + "/" + shortCode, nil
+	return s.baseURL + "/" + savedLink.ShortCode, nil
 }
 
 func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error) {
