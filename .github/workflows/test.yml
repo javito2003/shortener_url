@@ -1,0 +1,38 @@
+name: Run Go Tests
+on:
+  # Ejecuta en pushes a cualquier rama que NO sea master o development
+  push:
+    branches-ignore:
+      - master
+      - development
+  
+  # ¡Lo más importante! Ejecuta en cada Pull Request
+  pull_request:
+    branches:
+      - master
+      - development
+
+jobs:
+  test:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25' # Asegúrate de usar tu versión de Go
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install mockery
+        run: go install github.com/vektra/mockery/v2@latest
+
+      - name: Generate Mocks
+        run: go generate ./...
+
+      - name: Run Go Tests
+        run: make test
