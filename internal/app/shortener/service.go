@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"log"
 	"math/big"
+	"time"
 
 	link "github.com/javito2003/shortener_url/internal/domain"
 )
@@ -16,16 +17,18 @@ type Shortener interface {
 }
 
 type Service struct {
-	baseURL string
-	repo    LinkRepository
-	cache   LinkCache
+	baseURL          string
+	repo             LinkRepository
+	cache            LinkCache
+	expiresAtMinutes time.Duration
 }
 
-func NewService(repo LinkRepository, cache LinkCache, baseURL string) *Service {
+func NewService(repo LinkRepository, cache LinkCache, baseURL string, expiresAtMinutes time.Duration) *Service {
 	return &Service{
-		repo:    repo,
-		cache:   cache,
-		baseURL: baseURL,
+		repo:             repo,
+		cache:            cache,
+		baseURL:          baseURL,
+		expiresAtMinutes: expiresAtMinutes,
 	}
 }
 
@@ -41,7 +44,8 @@ func (s *Service) Shorten(ctx context.Context, url, user string) (string, error)
 		return "", err
 	}
 
-	l := &link.Link{URL: url, ShortCode: shortCode, UserID: user}
+	expiresAt := time.Now().Add(s.expiresAtMinutes)
+	l := &link.Link{URL: url, ShortCode: shortCode, UserID: user, ExpiresAt: &expiresAt}
 
 	savedLink, err := s.repo.Save(ctx, l)
 	if err != nil {
@@ -69,6 +73,10 @@ func (s *Service) Resolve(ctx context.Context, shortCode string) (string, error)
 
 		if !found {
 			return "", ErrShortLinkNotFound
+		}
+
+		if l.IsExpired() {
+			return "", ErrShortLinkExpired
 		}
 
 		if err := s.cache.Save(ctx, l); err != nil {

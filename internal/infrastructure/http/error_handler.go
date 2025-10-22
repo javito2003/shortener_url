@@ -29,6 +29,8 @@ func ErrorHandler() gin.HandlerFunc {
 				c.JSON(http.StatusUnauthorized, gin.H{"message": appErr.Message})
 			case app.ErrConflict:
 				c.JSON(http.StatusConflict, gin.H{"message": appErr.Message})
+			case app.ErrBadRequest:
+				c.JSON(http.StatusBadRequest, gin.H{"message": appErr.Message})
 			default:
 				c.JSON(http.StatusInternalServerError, gin.H{"message": "an unexpected application error occurred"})
 			}

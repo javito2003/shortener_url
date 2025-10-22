@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"time"
 
 	link "github.com/javito2003/shortener_url/internal/domain"
 	"github.com/redis/go-redis/v9"
@@ -27,13 +28,30 @@ func NewStore(client *redis.Client) *Store {
 func (s *Store) Save(ctx context.Context, link *link.Link) error {
 	pipe := s.client.Pipeline()
 
+	var ttl time.Duration
+	if link.IsExpired() {
+		return nil
+	}
+
+	if link.ExpiresAt != nil {
+		ttl = time.Until(*link.ExpiresAt)
+
+		if ttl <= 0 {
+			return nil
+		}
+	}
+
 	pipe.HSet(ctx, "short:"+link.ShortCode, UrlSaved{
 		ID:         link.ID,
 		URL:        link.URL,
 		ShortCode:  link.ShortCode,
 		ClickCount: int64(link.ClickCount),
 	})
-	pipe.Set(ctx, "url:"+link.URL, link.ShortCode, 0)
+	if ttl > 0 {
+		pipe.Expire(ctx, "short:"+link.ShortCode, ttl)
+	}
+
+	pipe.Set(ctx, "url:"+link.URL, link.ShortCode, ttl)
 
 	_, err := pipe.Exec(ctx)
 

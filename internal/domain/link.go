@@ -1,9 +1,23 @@
 package domain
 
+import "time"
+
+const ExpiresAtMinutes = time.Minute * 60 * 24 * 7 // 7 dias
+
 type Link struct {
-	ID         string `json:"id,omitempty"`
-	URL        string `json:"url,omitempty"`
-	ShortCode  string `json:"short_code,omitempty"`
-	ClickCount int    `json:"click_count,omitempty"`
-	UserID     string `json:"user_id,omitempty"`
+	ID         string
+	URL        string
+	ShortCode  string
+	ClickCount int
+	ExpiresAt  *time.Time
+	UserID     string
+}
+
+func (l *Link) SetExpireTime() {
+	expiresAt := time.Now().Add(ExpiresAtMinutes)
+	l.ExpiresAt = &expiresAt
+}
+
+func (l *Link) IsExpired() bool {
+	return l.ExpiresAt != nil && time.Now().After(*l.ExpiresAt)
 }
