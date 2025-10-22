@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -30,7 +31,7 @@ func init() {
 func LoadConfig() {
 	err := godotenv.Load()
 	if err != nil {
-		panic("Error loading .env file: " + err.Error())
+		log.Println("Error to load .env, not found", err.Error())
 	}
 
 	AppConfig = &Config{
