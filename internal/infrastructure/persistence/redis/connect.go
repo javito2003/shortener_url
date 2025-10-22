@@ -15,7 +15,9 @@ func Connect() (*redis.Client, error) {
 	}
 
 	client = redis.NewClient(&redis.Options{
-		Addr: config.AppConfig.Redis.Address,
+		Addr:     config.AppConfig.Redis.Address,
+		Username: config.AppConfig.Redis.Username,
+		Password: config.AppConfig.Redis.Password,
 	})
 
 	_, err := client.Ping(context.Background()).Result()

@@ -13,7 +13,9 @@ type Mongo struct {
 }
 
 type Redis struct {
-	Address string
+	Address  string
+	Username string
+	Password string
 }
 
 type Config struct {
@@ -40,7 +42,9 @@ func LoadConfig() {
 			Database: os.Getenv("MONGO_DATABASE"),
 		},
 		Redis: &Redis{
-			Address: os.Getenv("REDIS_ADDRESS"),
+			Address:  os.Getenv("REDIS_ADDRESS"),
+			Username: os.Getenv("REDIS_USERNAME"),
+			Password: os.Getenv("REDIS_PASSWORD"),
 		},
 		BaseURL: os.Getenv("BASE_URL"),
 	}
