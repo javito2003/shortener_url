@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/javito2003/shortener_url/internal/app/shortener"
 	"github.com/javito2003/shortener_url/internal/app/shortener/mocks"
@@ -13,11 +14,12 @@ import (
 )
 
 const baseUrl = "http://short.ly"
+const expiresMinutes = 60
 
 func setupService() (shortener.Shortener, *mocks.LinkRepository, *mocks.LinkCache) {
 	mockShortenerRepo := new(mocks.LinkRepository)
 	mockCache := new(mocks.LinkCache)
-	service := shortener.NewService(mockShortenerRepo, mockCache, baseUrl)
+	service := shortener.NewService(mockShortenerRepo, mockCache, baseUrl, expiresMinutes)
 
 	return service, mockShortenerRepo, mockCache
 }
@@ -30,12 +32,14 @@ func TestShortenerService_Shorten(t *testing.T) {
 		ctx := context.Background()
 
 		shortCode := "abc1234"
+		expiresAt := time.Now().Add(expiresMinutes)
 		mockCache.On("GetByUrl", mock.Anything, "http://example.com").Return(&domain.Link{
 			ID:         "id",
 			ClickCount: 0,
 			UserID:     "userId",
 			URL:        "http://example.com",
 			ShortCode:  shortCode,
+			ExpiresAt:  &expiresAt,
 		}, true, nil).Once()
 
 		shortURL, err := service.Shorten(ctx, "http://example.com", "userId")
@@ -78,12 +82,14 @@ func TestShortenerService_Resolve(t *testing.T) {
 		shortCode := "abc1234"
 		expectedURL := "http://example.com"
 
+		expiresAt := time.Now().Add(expiresMinutes)
 		mockCache.On("FindByShortCode", mock.Anything, shortCode).Return(&domain.Link{
 			ID:         "id",
 			ClickCount: 0,
 			UserID:     "userId",
 			URL:        expectedURL,
 			ShortCode:  shortCode,
+			ExpiresAt:  &expiresAt,
 		}, true, nil).Once()
 
 		mockCache.On("IncrementClickCount", mock.Anything, shortCode).Return(nil).Once()
@@ -95,6 +101,28 @@ func TestShortenerService_Resolve(t *testing.T) {
 	})
 
 	t.Run("Should return error if short code not found", func(t *testing.T) {
+		ctx := context.Background()
+		shortCode := "nonexistent"
+		expectedURL := "http://example.com"
+		expiresAt := time.Now().Add(-expiresMinutes - 1)
+
+		mockCache.On("FindByShortCode", mock.Anything, shortCode).Return(&domain.Link{}, false, nil).Once()
+		mockRepo.On("FindByShortCode", mock.Anything, shortCode).Return(&domain.Link{
+			ID:         "id",
+			ClickCount: 0,
+			UserID:     "userId",
+			URL:        expectedURL,
+			ShortCode:  shortCode,
+			ExpiresAt:  &expiresAt,
+		}, true, nil).Once()
+
+		url, err := service.Resolve(ctx, shortCode)
+
+		assert.Equal(shortener.ErrShortLinkExpired, err)
+		assert.Empty(url)
+	})
+
+	t.Run("Should return error expired error", func(t *testing.T) {
 		ctx := context.Background()
 		shortCode := "nonexistent"
 

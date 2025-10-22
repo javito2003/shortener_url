@@ -20,6 +20,7 @@ type linkModel struct {
 	Url        string        `bson:"url"`
 	ClickCount int           `bson:"click_count"`
 	UserID     bson.ObjectID `bson:"user_id"`
+	ExpiresAt  bson.DateTime `bson:"expires_at"`
 }
 
 func NewRepository(db *mongo.Client) *repository {
@@ -37,6 +38,7 @@ func (r *repository) Save(ctx context.Context, link *link.Link) (*link.Link, err
 		Url:        link.URL,
 		ClickCount: link.ClickCount,
 		UserID:     userId,
+		ExpiresAt:  bson.DateTime(link.ExpiresAt.UnixMilli()),
 	})
 
 	if err != nil {
@@ -59,11 +61,13 @@ func (r *repository) FindByShortCode(ctx context.Context, shortCode string) (*li
 		return nil, false, err
 	}
 
+	expiresAtTime := model.ExpiresAt.Time()
 	return &link.Link{
 		ID:         model.ID.Hex(),
 		ShortCode:  model.ShortCode,
 		URL:        model.Url,
 		ClickCount: model.ClickCount,
+		ExpiresAt:  &expiresAtTime,
 	}, true, nil
 }
 
@@ -77,11 +81,14 @@ func (r *repository) GetByUrl(ctx context.Context, url string) (*link.Link, bool
 		return nil, false, err
 	}
 
+	expiresAtTime := model.ExpiresAt.Time()
+
 	return &link.Link{
 		ID:         model.ID.Hex(),
 		ShortCode:  model.ShortCode,
 		URL:        model.Url,
 		ClickCount: model.ClickCount,
+		ExpiresAt:  &expiresAtTime,
 	}, true, nil
 }
 
@@ -108,11 +115,14 @@ func (r *repository) GetByUser(ctx context.Context, userID string, limit, skip i
 		if err := cursor.Decode(&model); err != nil {
 			return nil, err
 		}
+
+		expiresAtTime := model.ExpiresAt.Time()
 		links = append(links, &link.Link{
 			ID:         model.ID.Hex(),
 			ShortCode:  model.ShortCode,
 			URL:        model.Url,
 			ClickCount: model.ClickCount,
+			ExpiresAt:  &expiresAtTime,
 		})
 	}
 

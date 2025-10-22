@@ -21,6 +21,8 @@ import (
 	"github.com/javito2003/shortener_url/internal/infrastructure/security"
 )
 
+const expiresMinutes = 60
+
 type Server struct {
 	http             *gin.Engine
 	ShortenerService appShortener.Shortener
@@ -49,7 +51,7 @@ func NewServer() *Server {
 	token := security.NewJWTGenerator("secret")
 
 	// Service
-	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL)
+	shortenerService := appShortener.NewService(mongoRepo, redisCache, config.AppConfig.BaseURL, expiresMinutes)
 	workerService := clicks_worker.NewService(clicksReader, bulkUpdater)
 	authService := appAuth.NewService(userRepo, hasher, token)
 	userService := appUser.NewUserService(userRepo)
